@@ -26,11 +26,11 @@ class IconCache():
     path = ''
     extList = ['.png', '.gif']
     pathList = [
-        '/ico/',
-        # '/png/96/',
-        # '/png/72/',
+        '/png/96/',
+        '/png/72/',
         '/png/48/',
-        '/png/24/'
+        '/png/24/',
+        '/ico/',
       ]
     path = os.path.dirname(os.path.realpath(sys.argv[0]))
 
