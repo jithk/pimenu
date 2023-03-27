@@ -164,7 +164,7 @@ class Runner():
         if map_widget is None:
             text = Text(self.frame)
         else:
-            text = Text(self.frame, height=4, bg=self.bg)
+            text = Text(self.frame, height=7, bg=self.bg)
         text.pack(side='left', fill='x', expand=True)
 
         scrollbar = Scrollbar(self.frame)
