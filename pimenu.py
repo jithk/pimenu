@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 from tkinter import Tk, Frame, Button, Label, PhotoImage, Scrollbar, Text, LabelFrame, StringVar
-from math import sqrt, floor, ceil
+import math
 import threading
 import yaml
 import time
@@ -147,14 +147,17 @@ class Runner():
         if (self.position_list is None):
             self.position_list = list()
             self.position_list.append((lat,long))
+            self.map_widget.set_position(lat, long)
             return
-        if ((lat,long) in self.position_list):
-            return
+        last_lat,last_long=self.position_list[-1]
+        if (not math.isclose(last_lat, lat,rel_tol=1e-6) or not math.isclose(last_long, long, rel_tol=1e-6)):
+            self.map_widget.set_position(lat, long)
         self.position_list.append((lat,long))
         if (self.current_path is None):
             self.current_path = self.map_widget.set_path(self.position_list, color=color)
         else:
             self.current_path.set_position_list(self.position_list)
+            # self.map_widget.set_position(lat, long)
         return
     def start(self):
         print("Thread: start")
@@ -167,11 +170,11 @@ class Runner():
                 nmea = pynmea2.parse(msg)
                 if not nmea.is_valid:
                     continue
-                lat=round(nmea.latitude, 6)
-                long=round(nmea.longitude, 6)
+                lat=round(nmea.latitude, 5)
+                long=round(nmea.longitude, 5)
                 gps_qual = nmea.gps_qual
 
-                self.map_widget.set_position(lat, long)
+                # self.map_widget.set_position(lat, long)
                 # Draw the path
                 self.add_position_to_map(lat, long, gps_qual)
                 self.last_gps_mode = gps_qual
@@ -284,8 +287,8 @@ class PiMenu(Frame):
 
         # calculate tile distribution
         allitems = len(items) + num
-        rows = floor(sqrt(allitems))
-        cols = ceil(allitems / rows)
+        rows = math.floor(math.sqrt(allitems))
+        cols = math.ceil(allitems / rows)
 
         # make cells autoscale
         for x in range(int(cols)):
@@ -328,7 +331,7 @@ class PiMenu(Frame):
 
             # add buton to the grid
             btn.grid(
-                row=int(floor(num / cols)),
+                row=int(math.floor(num / cols)),
                 column=int(num % cols),
                 padx=1,
                 pady=1,
