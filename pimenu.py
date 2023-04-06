@@ -105,15 +105,60 @@ class Runner():
         self.map_widget=map_widget
         self.first_marker=None
         self.last_marker=None
+        self.last_gps_mode=None
         self.title_var=None
+        self.position_list = None
+        self.current_path = None
     def run(self):
         self.main_thread.start()
+    def get_pos_color(gps_qual):
+        color_outside='#ff006e'
+        title=None
+        colors_map = {
+            1:('#ff006e', 'SPP'), # SPP
+            2:('#fb5607', 'DGPS'),
+            4:('#06d6a0', 'RTK Fixed'),
+            5:('#3a86ff', 'RTK Float'),
+            6:('#6d6875', 'DR'),
+        }
+        if gps_qual in colors_map.keys():
+            color_outside,title = colors_map[gps_qual]
+        return (color_outside,title)
+
+    def show_current_pos_marker(self,lat, long, gps_qual):
+        color_circle='#caf0f8'
+        color_outside,title = Runner.get_pos_color(gps_qual)
+        marker = self.map_widget.set_marker(lat, long, marker_color_circle=color_circle, marker_color_outside=color_outside)
+        if self.title_var is not None and title is not None:
+            self.title_var.set(title)
+        if self.first_marker is None:
+            self.first_marker = marker
+        elif self.last_marker is None:
+            self.last_marker = marker
+        if self.last_marker is not None:
+            self.last_marker.delete()
+            self.last_marker = marker
+        return
+    def add_position_to_map(self, lat, long, gps_mode):
+        if self.last_gps_mode != gps_mode:
+            self.position_list = None
+            self.current_path = None
+        color,title=Runner.get_pos_color(gps_mode)
+        if (self.position_list is None):
+            self.position_list = list()
+            self.position_list.append((lat,long))
+            return
+        if ((lat,long) in self.position_list):
+            return
+        self.position_list.append((lat,long))
+        if (self.current_path is None):
+            self.current_path = self.map_widget.set_path(self.position_list, color=color)
+        else:
+            self.current_path.set_position_list(self.position_list)
+        return
     def start(self):
         print("Thread: start")
         self.process = subprocess.Popen(self.command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        # i = 0
-        last_time = time.time()
-        last_mode = 0
         while self.process.poll() is None:
             msg = self.process.stdout.readline().strip() # read a line from the process output
             if msg and 'GPGGA' not in msg:
@@ -122,36 +167,16 @@ class Runner():
                 nmea = pynmea2.parse(msg)
                 if not nmea.is_valid:
                     continue
+                lat=round(nmea.latitude, 6)
+                long=round(nmea.longitude, 6)
                 gps_qual = nmea.gps_qual
-                if time.time() - last_time < kMapRefreshRate and gps_qual == last_mode:
-                    continue
-                last_time = time.time()
-                last_mode = gps_qual
-                color_circle='#caf0f8'
-                color_outside='#ff006e'
-                title=None
-                colors_map = {
-                    1:('#ff006e', 'SPP'), # SPP
-                    2:('#fb5607', 'DGPS'),
-                    4:('#06d6a0', 'RTK Fixed'),
-                    5:('#3a86ff', 'RTK Float'),
-                    6:('#6d6875', 'DR'),
-                }
-                if gps_qual in colors_map.keys():
-                    color_outside,title = colors_map[gps_qual]
-                marker = self.map_widget.set_marker(nmea.latitude, nmea.longitude, marker_color_circle=color_circle, marker_color_outside=color_outside)
-                self.map_widget.set_position(nmea.latitude, nmea.longitude)
-                if self.title_var is not None and title is not None:
-                    self.title_var.set(title)
-                if self.first_marker is None:
-                    self.first_marker = marker
-                elif self.last_marker is None:
-                    self.last_marker = marker
-                if self.last_marker is not None:
-                    self.last_marker.delete()
-                    self.last_marker = marker
-                # print("Done {}".format(i))
-                # i += 1
+
+                self.map_widget.set_position(lat, long)
+                # Draw the path
+                self.add_position_to_map(lat, long, gps_qual)
+                self.last_gps_mode = gps_qual
+                # Draw the marker
+                self.show_current_pos_marker(lat, long, gps_qual)
         print("Thread: end")
         self.process = None
     def stop(self):
@@ -165,6 +190,8 @@ class Runner():
             text = Text(self.frame)
         else:
             text = Text(self.frame, height=7, bg=self.bg)
+            # map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)  # google normal
+            # map_widget.set_tile_server("http://c.tile.stamen.com/watercolor/{z}/{x}/{y}.png")  # painting style
         text.pack(side='left', fill='x', expand=True)
 
         scrollbar = Scrollbar(self.frame)
