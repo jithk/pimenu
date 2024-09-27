@@ -1,0 +1,3 @@
+[submodule "pynmea2"]
+	path = pynmea2
+	url = https://github.com/Knio/pynmea2.git
